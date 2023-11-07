@@ -53,7 +53,7 @@ async function sendAutoReply(auth, gmail, email, labelId, message) {
           }\r\n` +
           `Content-Type: text/plain; charset="UTF-8"\r\n` +
           `Content-Transfer-Encoding: 7bit\r\n\r\n` +
-          `Thank you for your email. I'm currently on vacation and will reply to you when I return.\r\n`
+          `Thank you for your email. I'm currently on vacation and will get back to you ASAP.\r\n`
       ).toString("base64"),
     },
   };
