@@ -51,17 +51,65 @@ async function createLabel(auth, gmail) {
   }
 }
 
+//  Function to create sample Mail and auto send reply
+async function sendAutoReply(auth, gmail, email, labelId, message) {
+  const replyMessage = {
+    userId: "me",
+    resource: {
+      raw: Buffer.from(
+        `To: ${
+          email.payload.headers.find((header) => header.name === "From").value
+        }\r\n` +
+          `Subject: Re: ${
+            email.payload.headers.find((header) => header.name === "Subject")
+              .value
+          }\r\n` +
+          `Content-Type: text/plain; charset="UTF-8"\r\n` +
+          `Content-Transfer-Encoding: 7bit\r\n\r\n` +
+          `Thank you for your email. I'm currently on vacation and will reply to you when I return.\r\n`
+      ).toString("base64"),
+    },
+  };
 
-//  Function to create Mail and auto send reply
+  await gmail.users.messages.send(replyMessage);
 
+  await gmail.users.messages.modify({
+    auth,
+    userId: "me",
+    id: message.id,
+    resource: {
+      addLabelIds: [labelId],
+      removeLabelIds: ["INBOX"],
+    },
+  });
+}
 
-
-//  main function to call all function 
+//  main function to call all function
 async function mainLogic(auth, gmail) {
   const labelId = await createLabel(auth, gmail);
 
-//    Set time interval for cheking and sending mail every 45-120 sec
- 
+  //    Set time interval for cheking for unreplied mails and sending mail every 45-120 sec
+  setInterval(async () => {
+    const messages = await unRepliedMessages(auth, gmail);
+    if (messages && messages.length > 0) {
+      for (const message of messages) {
+        const messageData = await gmail.users.messages.get({
+          auth,
+          userId: "me",
+          id: message.id,
+        });
+
+        const email = messageData.data;
+        const hasReplied = email.payload.headers.some(
+          (header) => header.name === "In-Reply-To"
+        );
+
+        if (!hasReplied) {
+          await sendAutoReply(auth, gmail, email, labelId, message);
+        }
+      }
+    }
+  }, Math.floor(Math.random() * (120 - 45 + 1) + 45) * 1000);
 }
 
 app.get("/", async (req, res) => {
